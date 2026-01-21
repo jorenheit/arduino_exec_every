@@ -135,30 +135,46 @@ namespace exec {
     };
   } // namespace detail
 
-  template <int Tag, typename F>
-  inline auto every_impl(uint32_t const interval, F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
+  template <int Tag, typename RunCondition, typename ThrottleCondition, typename F>
+  inline auto every_if_throttled_impl(uint32_t const interval, 
+                                      RunCondition &&runCondition, 
+                                      ThrottleCondition &&throttleCondition, 
+                                      F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
+    using Ret = decltype(detail::invoke(f, 0, 0));
     static uint32_t last = 0;
-    const uint32_t now = ::millis();
-    const uint32_t dt  = now - last;
-    if (dt >= interval) {
+    uint32_t const now = ::millis();
+    uint32_t const dt  = now - last;
+    if (dt >= interval && detail::eval(throttleCondition, dt)) {
       last = now;
-      return detail::RunAndReturn<decltype(detail::invoke(f, 0, 0))>::run(f, dt);
-    }
-    return {};
-  }
-
-  template <int Tag, typename C, typename F>
-  inline auto every_if_impl(uint32_t const interval, C&& c, F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
-    static uint32_t last = 0;
-    const uint32_t now = ::millis();
-    const uint32_t dt  = now - last;
-    if (dt >= interval && detail::eval(c, dt)) {
-      last = now;
-      return detail::RunAndReturn<decltype(detail::invoke(f, 0, 0))>::run(f, dt);
+      if (detail::eval(runCondition, dt)) return detail::RunAndReturn<Ret>::run(f, dt);
     }
     return {};
   }  
+
+  // Run at every interval regardless of any conditions.
+  template <int Tag, typename F>
+  inline auto every_impl(uint32_t const interval, F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
+    return every_if_throttled_impl<Tag>(interval, true, true, f);
+  }
+  
+  // Run only when the interval expires and the condition is met at that moment in time. If the interval
+  // expires and the condition is not met, the timer is reset and the condition is checked when it 
+  // expires again.
+  template <int Tag, typename C, typename F>
+  inline auto every_if_impl(uint32_t const interval, C&& c, F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
+    return every_if_throttled_impl<Tag>(interval, c, true, f);
+  }
+
+  // Run as soon as the interval has expired and the condition is met. If the condition is not met, 
+  // the timer keeps running and the condition is checked each subsequent time until it evaluates 
+  // to true.
+  template <int Tag, typename C, typename F>
+  inline auto throttled_impl(uint32_t const interval, C&& c, F&& f) -> Maybe<decltype(detail::invoke(f, 0, 0))> {
+    return every_if_throttled_impl<Tag>(interval, true, c, f);
+  }  
+
 } // namespace exec
 
-#define exec_every(interval, callable) every_impl<__COUNTER__>((interval), (callable))
-#define exec_every_if(interval, condition, callable) every_if_impl<__COUNTER__>((interval), (condition), (callable))
+#define exec_every(interval, ...) exec::every_impl<__COUNTER__>((interval), __VA_ARGS__)
+#define exec_every_if(interval, condition, ...) exec::every_if_impl<__COUNTER__>((interval), (condition), __VA_ARGS__)
+#define exec_throttled(interval, condition, ...) exec::throttled_impl<__COUNTER__>((interval), (condition), __VA_ARGS__)
