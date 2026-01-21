@@ -20,7 +20,7 @@ Internally everything is based on templates and overload resolution:
 - Return types are deduced and enforced
 - Conditions may be booleans or callables (optionally receiving `dt`)
 
-Callbacks do **not** need to be lambdas: free functions, member-function wrappers, and function pointers all work equally well.
+Callbacks may be any callable objects, like function pointers, lambda's or other function-like objects with `operator()` overloaded.
 
 ---
 
@@ -42,6 +42,7 @@ Each macro call site maintains a private timer:
 - It optionally checks a condition.
 - If it runs, it calls your callback.
 - The callback may optionally accept a `uint32_t dt` argument (elapsed time in ms since the previous run).
+- A `Maybe<T>` object containing the value returned by the callback (if executed) is returned.
 
 A callback can be any callable compatible with one of these signatures:
 
@@ -60,10 +61,11 @@ Timers are independent per call site because the macros use `__COUNTER__` to gen
 
 All three macros return a `exec::Maybe<T>`:
 
-- If the callback **did not run**, the returned `Maybe<T>` is **empty** (`valid() == false`, and it converts to `false` in an `if`).
+- If the callback **did not run**, the returned `Maybe<T>` is **empty**. Validity of the object can be checked explicitly using its `valid()` member; it also converts implicitly to `bool` when used in a conditional expression.
 - If the callback **did run**:
-  - If the callback returns a value of type `T`, you get a `Maybe<T>` containing that value.
-  - If the callback returns `void`, you get a `Maybe<void>` that evaluates to `true` when it ran.
+  - If the callback returns a value of type `T`, you get a `Maybe<T>` containing that value. This value can be retrieved by calling the `value()` member or by 'dereferencing' it using the `*` operator.
+  - If the callback returns a reference, the `Maybe` object will return a reference to this same object and is therefore fully transparent.
+  - If the callback returns `void`, you get a `Maybe<void>` that evaluates to `true` when it ran. This type cannot be dereferenced.
 
 You can use it like this:
 
