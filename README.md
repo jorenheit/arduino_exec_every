@@ -45,7 +45,6 @@ Each macro call site maintains a private timer:
 - A `Maybe<T>` object containing the value returned by the callback (if executed) is returned.
 
 A callback can be any callable compatible with one of these signatures:
-
 ```cpp
 void f();
 void f(uint32_t dt);
@@ -53,11 +52,13 @@ T    f();
 T    f(uint32_t dt);
 ```
 
-Timers are independent per call site because the macros use `__COUNTER__` to generate a unique template tag per invocation.
+A condition can be a `bool`, a type convertible to `bool` or a callable that returns `bool`, optionally accepting a `uint32_t`:
+```cpp
+bool c();
+bool c(uint32_t dt);
+```
 
----
-
-## Return values and `Maybe<>`
+## Return value: `Maybe<>`
 
 All three macros return a `exec::Maybe<T>`:
 
