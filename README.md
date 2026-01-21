@@ -170,19 +170,26 @@ Important detail: if the interval has expired but the condition is false, **the 
 
 **Typical use:** “run no more than once per interval, but don’t miss the first opportunity once ready”.
 
-### Example: flush buffered data as soon as a link is up, but at most once per 2 s
-
+### Example: rate-limited condition
 ```cpp
-void loop() {
-  exec_throttled(2000, linkIsUp(), [] {
-    flushTelemetry();
-  });
+bool linkIsUp();
+bool linkStable(uint32_t dt) {
+  static uint32_t stableTime = 0;
+  if (linkIsUp()) stableTime += dt;
+  else            stableTime = 0;
+  return stableTime > 3000;   // link up for at least 3 seconds
+}
 
-  // other loop work...
+void loop() {
+  exec_throttled(500, linkStable, flushTelemetry());
 }
 ```
 
-If `linkIsUp()` becomes true long after the last flush, the next loop iteration will flush immediately (no extra waiting). After flushing, it won’t run again until at least 2 seconds have passed.
+Here:
+
+- The interval limits how often flushing may occur
+- The condition ensures the link has been stable long enough
+- The callback runs immediately once both are satisfied
 
 ### Example: use the return value to confirm a one-shot action happened
 
