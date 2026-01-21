@@ -192,23 +192,6 @@ Here:
 - The condition ensures the link has been stable long enough
 - The callback runs immediately once both are satisfied
 
-### Example: use the return value to confirm a one-shot action happened
-
-```cpp
-void loop() {
-  auto didSend = exec_throttled(1000, canSendNow(), []() -> bool {
-    return sendPacket();   // true on success
-  });
-
-  if (didSend) {
-    bool ok = *didSend;    // result from sendPacket()
-    // react to ok...
-  }
-}
-```
-
----
-
 ## Notes / gotchas
 
 - Uses `millis()` internally; wraparound is handled naturally by unsigned subtraction (`now - last`).
