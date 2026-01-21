@@ -1,7 +1,26 @@
 # exec-every (Arduino timing macros)
 
 Header-only helpers for running code at regular intervals without timer interrupts.  
-All macros are based on `millis()` and keep their own internal state, so you can call them from `loop()` (or any frequently-called function) without manually tracking timestamps.
+They are designed for use inside `loop()` when timer interrupts are unavailable, undesirable, or already in use.
+
+The helpers avoid `delay()`, keep `loop()` responsive, and remove repetitive timestamp bookkeeping, while remaining fully **type-safe**.
+
+## Overview
+
+The library exposes **three macros**:
+
+- `exec_every(interval, callback)` – run periodically, unconditionally  
+- `exec_every_if(interval, condition, callback)` – run periodically, but only if a condition is true at the scheduled moment  
+- `exec_throttled(interval, condition, callback)` – run at most once per interval, as soon as a condition becomes true
+
+Although these are macros for convenience, **the implementation is fully type-safe**.  
+Internally everything is based on templates and overload resolution:
+
+- Callback signatures are checked at compile time
+- Return types are deduced and enforced
+- Conditions may be booleans or callables (optionally receiving `dt`)
+
+Callbacks do **not** need to be lambdas: free functions, member-function wrappers, and function pointers all work equally well.
 
 ---
 
@@ -24,11 +43,13 @@ Each macro call site maintains a private timer:
 - If it runs, it calls your callback.
 - The callback may optionally accept a `uint32_t dt` argument (elapsed time in ms since the previous run).
 
-Callback signatures:
+A callback can be any callable compatible with one of these signatures:
 
 ```cpp
-[]() { /* ... */ }                 // no arguments
-[] (uint32_t dt) { /* ... */ }     // dt provided
+void f();
+void f(uint32_t dt);
+T    f();
+T    f(uint32_t dt);
 ```
 
 Timers are independent per call site because the macros use `__COUNTER__` to generate a unique template tag per invocation.
@@ -63,7 +84,7 @@ if (exec_every(1000, [] { /* ran */ })) {
 }
 ```
 
-This makes it easy to trigger follow-up actions only when the periodic action actually happened.
+This allows follow-up logic to be expressed cleanly and without extra state variables.
 
 ---
 
@@ -102,7 +123,7 @@ void loop() {
 
 Runs only when the interval expires *and* the condition is true **at that moment**.
 
-Important detail: if the interval expires while the condition is false, **the timer is reset anyway** and the condition will be checked again only after the next full interval.
+Important detail: if the interval expires while the condition is false, **the timer is reset anyway** and the condition is checked again only after the next full interval.
 
 **Typical use:** “sample only on schedule, but only if it’s allowed right then”.
 
