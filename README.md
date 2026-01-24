@@ -201,24 +201,7 @@ Here:
 - State is stored in a `static uint32_t last` per macro call site (unique via `__COUNTER__`).
 - Because that state is `static`, timing works as intended only if the call site is reached repeatedly (e.g. from `loop()`).
 - `interval` is milliseconds; `dt` is the elapsed time since the previous run of that call site (includes loop jitter).
-- Different values for `interval` may be passed in different iterations for dynamic timing.
-- The callback function should not change across iterations. On the first call to `exec_every`, the callback is stored in the handle and is not updated on subsequent calls. For dynamic callbacks, simply provide a wrapper that handles the dynamic dispatch:
-
-```cpp
-int a();
-int b();
-static int (*current)() = a;
-
-int dispatch() { 
-  return current();
-}
-
-void loop() {
-  current = someCondition ? a : b;
-  exec_every(1000, dispatch);
-}
-```
-
+- Different values for `interval` may be passed in different iterations for dynamic timing.- 
 
 ---
 
@@ -315,6 +298,24 @@ The `exec_every` family will schedule the first execution of the callback after 
   }
 ```
 ---
+
+### Dynamic Callbacks
+The callback function should not change across iterations. On the first call to `exec_every`, the callback is stored in the handle and is not updated on subsequent calls. For dynamic callbacks, simply provide a wrapper that handles the dynamic dispatch:
+
+```cpp
+int a();
+int b();
+static int (*current)() = a;
+
+int dispatch() { 
+  return current();
+}
+
+void loop() {
+  current = someCondition ? a : b;
+  exec_every(1000, dispatch);
+}
+```
 
 ### When to use Advanced features
 
