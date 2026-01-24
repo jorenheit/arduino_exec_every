@@ -1,9 +1,6 @@
 # exec-every (Arduino timing macros)
 
-Header-only helpers for running code at regular intervals without timer interrupts.  
-They are designed for use inside `loop()` when timer interrupts are unavailable, undesirable, or already in use.
-
-The helpers avoid `delay()`, keep `loop()` responsive, and remove repetitive timestamp bookkeeping, while remaining fully **type-safe**.
+This is a header-only library for scheduling callbacks at regular interval without using interrupts. The library is non-blocking, light-weight, low overhead and fully type-safe. The provided functionality is designed for use inside frequently called functions like `loop()` when timer interrupts are unavailable, undesirable, or already in use. Under most circumstances, no object management is required from the user; just call the scheduling function and you're done.
 
 ## Overview
 
@@ -18,16 +15,14 @@ Additionally, there are the `*_with` versions, that allow you to use a custom re
 - `exec_every_if_with(millisFn, interval, condition, callback)` 
 - `exec_throttled_with(millisFn, interval, condition, callback)` 
 
+## Quick Usage Example
+Simply call, for example, `exec_every` in the main loop, providing the interval in milliseconds and a callback (commonly a lambda, but could be anything that can be called). The code below will print "Ping!" to the serial device once every second, starting after one second:
 
-Although these are macros for convenience, **the implementation is fully type-safe**.  
-Internally everything is based on templates and overload resolution:
-
-- Callback signatures are checked at compile time
-- Return types are deduced and enforced
-- Conditions may be booleans or callables (optionally receiving `dt`)
-
-Callbacks may be any callable objects, like function pointers, lambda's or other function-like objects with `operator()` overloaded.
-
+```cpp
+void loop() {
+  exec_every(1000, [](){ Serial.println("Ping!"); });
+}
+```
 ---
 
 ## Installation
