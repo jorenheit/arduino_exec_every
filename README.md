@@ -198,3 +198,111 @@ Here:
 - State is stored in a `static uint32_t last` per macro call site (unique via `__COUNTER__`).
 - Because that state is `static`, timing works as intended only if the call site is reached repeatedly (e.g. from `loop()`).
 - `interval` is milliseconds; `dt` is the elapsed time since the previous run of that call site (includes loop jitter).
+
+
+---
+
+## Advanced Use
+
+### Handles
+
+Every call to `exec_every`, `exec_every_if`, or `exec_throttled` creates a *persistent call site* with its own internal timer.
+This call site is represented internally by a **handle**.
+
+You normally do not need to interact with handles directly.  
+However, they can be useful when you want to *manually control* a scheduled callback.
+
+You can obtain the handle associated with a `Maybe<T>` like this:
+
+```cpp
+auto result = exec_every(1000, readTemperature);
+exec::Handle h = exec::getHandle(result);
+```
+
+The handle uniquely identifies the internal timer and callback associated with that call site.
+
+---
+
+### Resetting a call site
+
+A handle can be reset explicitly:
+
+```cpp
+exec::reset(h);
+```
+
+This resets the internal timer as if the callback had just run.
+The next execution will only occur after a full interval has elapsed again.
+
+This is useful when:
+- external events invalidate accumulated timing
+- configuration changes require restarting a schedule
+- you want to realign periodic behavior
+
+Resetting a handle is always safe and does not depend on the callback’s return type.
+
+---
+
+### Forcing execution with `Maybe::force()`
+
+Sometimes you want to run the callback **outside the scheduler**, for example:
+- to obtain an initial value immediately
+- to re-evaluate logic on demand
+- to reuse the same callback logic without duplicating code
+
+Every `Maybe<T>` returned by the `exec_every` family provides a `force()` member.
+Calling `force()` executes the callback immediately and **returns its value directly**.
+Afterwards, the `Maybe` is guaranteed to be valid.
+
+```cpp
+auto m = exec_every(1000, readTemperature);
+
+// Run immediately and get the value
+int temperature = m.force();
+```
+
+For `void` callbacks:
+
+```cpp
+auto m = exec_every(1000, blinkLed);
+
+// Run immediately
+m.force();
+```
+
+Important notes:
+- `force()` does **not** reset the timer unless the callback itself does so.
+- Subsequent scheduled executions continue normally.
+- `force()` preserves reference return types transparently.
+
+---
+
+### Combining reset and force
+
+Handles and `force()` can be combined:
+
+```cpp
+auto m = exec_every(2000, readTemperature);
+auto h = exec::getHandle(m);
+
+// External event invalidates timing
+exec::reset(h);
+
+// Immediately obtain a fresh value
+int value = m.force();
+```
+
+This allows precise control over *when* a callback runs and *how* its timing behaves.
+
+---
+
+### When to use Advanced features
+
+Most users will never need these tools.
+
+Use handles and `force()` only when:
+- you need deterministic control over timing
+- you want to reuse scheduled callbacks manually
+- external events must override the scheduler
+
+For normal periodic logic, the basic macros are sufficient.
