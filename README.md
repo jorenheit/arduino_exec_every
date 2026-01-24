@@ -239,8 +239,6 @@ This is useful when:
 - configuration changes require restarting a schedule
 - you want to realign periodic behavior
 
-Resetting a handle is always safe and does not depend on the callback’s return type.
-
 ---
 
 ### Forcing execution with `Maybe::force()`
@@ -252,7 +250,7 @@ Sometimes you want to run the callback **outside the scheduler**, for example:
 
 Every `Maybe<T>` returned by the `exec_every` family provides a `force()` member.
 Calling `force()` executes the callback immediately and **returns its value directly**.
-Afterwards, the `Maybe` is guaranteed to be valid.
+Afterwards, the `Maybe` is guaranteed to be valid, containing that same value.
 
 ```cpp
 auto m = exec_every(1000, readTemperature);
@@ -277,23 +275,25 @@ Important notes:
 
 ---
 
-### Combining reset and force
-
-Handles and `force()` can be combined:
+### Using `force()` to run the callback immediately 
+The `exec_every` family will schedule the first execution of the callback after the specified interval has expired. If you need to run the callback immediately, you have to do this explicitly using some additional logic that makes use of the `force()` member. For example:
 
 ```cpp
-auto m = exec_every(2000, readTemperature);
-auto h = exec::getHandle(m);
+  void logTemp(int);
+  int readTemp();
 
-// External event invalidates timing
-exec::reset(h);
+  // schedule a temp-logger
+  auto m = exec_every(1000, []() {
+    logTemp(millis(), readTemp());
+  });
 
-// Immediately obtain a fresh value
-int value = m.force();
+  // log at immediately
+  static bool firstTime = true;
+  if (firstTime) {
+    m.force(); 
+    firstTime = false;
+  }
 ```
-
-This allows precise control over *when* a callback runs and *how* its timing behaves.
-
 ---
 
 ### When to use Advanced features
