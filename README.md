@@ -7,11 +7,14 @@ The helpers avoid `delay()`, keep `loop()` responsive, and remove repetitive tim
 
 ## Overview
 
-The library exposes **three macros**:
+The library exposes these functions (macro's):
 
 - `exec_every(interval, callback)` – run periodically, unconditionally  
+- `exec_every_with(millisFn, interval, callback)` – same as `exec_every` for a custom millis-function
 - `exec_every_if(interval, condition, callback)` – run periodically, but only if a condition is true at the scheduled moment  
+- `exec_every_if_with(millisFn, interval, condition, callback)` – same as `exec_every+if` for a custom millis-function
 - `exec_throttled(interval, condition, callback)` – run at most once per interval, as soon as a condition becomes true
+- `exec_throttled_with(millisFn, interval, condition, callback)` – same as `exec_throttled` for a custom millis-function
 
 Although these are macros for convenience, **the implementation is fully type-safe**.  
 Internally everything is based on templates and overload resolution:
