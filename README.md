@@ -1,4 +1,4 @@
-# exec-every (Arduino timing macros)
+# exec-every (Arduino task scheduling framework)
 
 This is a header-only library for scheduling callbacks at regular interval without using interrupts. The library is non-blocking, light-weight, low overhead and fully type-safe. The provided functionality is designed for use inside frequently called functions like `loop()` when timer interrupts are unavailable, undesirable, or already in use. Under most circumstances, no object management is required from the user; just call the scheduling function and you're done.
 
